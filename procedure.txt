@@ -1,0 +1,35 @@
+npm install -g wrangler
+wrangler whoami
+wrangler login
+wrangler d1 create telegram-ai-bot > d1_output.txt
+wrangler d1 create telegram-ai-bot-dev > d2_output.txt
+wrangler kv namespace create "telegram-ai-assistant" > kv1_output.txt
+wrangler kv namespace create "telegram-ai-assistant-dev" > kv2_output.txt
+
+create wrangler.toml from wrangler.toml.example
+
+wrangler secret put TELEGRAM_BOT_TOKEN --env production
+wrangler secret put GROQ_API_KEY --env production
+wrangler secret put GEMINI_API_KEY --env production
+
+wrangler secret put TELEGRAM_BOT_TOKEN --env development
+wrangler secret put GROQ_API_KEY --env development
+wrangler secret put GEMINI_API_KEY --env development
+
+OR
+
+Create in Cloudflare Web Portals > Secrets Store
+
+wrangler d1 migrations apply telegram-ai-bot-dev --env development --remote
+wrangler d1 migrations apply telegram-ai-bot-dev --env production --remote
+
+wrangler deploy -env=development
+
+https://<your-worker-name>.<your-subdomain>.workers.dev
+https://telegram-ai-assistant-development.imprasannarajendran.workers.dev/webhook
+
+https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/setWebhook?url=[WORKER-URL]
+
+https://api.telegram.org/bot8448893694:AAGlaoJYmHfLVO_ruzk7a84teKwpRZW0Rlg/getWebhookInfo"
+
+https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/getMe"

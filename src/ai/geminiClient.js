@@ -1,0 +1,65 @@
+export class GeminiClient {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://generativelanguage.googleapis.com/v1beta';
+    this.model = 'gemini-1.5-flash'; // or 'gemini-1.5-pro'
+  }
+
+  async generateResponse(prompt, context = {}, options = {}) {
+    const requestBody = {
+      contents: [{
+        parts: [{
+          text: this.buildPrompt(prompt, context)
+        }]
+      }],
+      generationConfig: {
+        temperature: options.temperature || 0.7,
+        maxOutputTokens: options.maxTokens || 1000,
+        topP: 0.95,
+        topK: 64
+      }
+    };
+
+    const response = await fetch(
+      `${this.baseURL}/models/${this.model}:generateContent?key=${this.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No response generated from Gemini');
+    }
+
+    return {
+      content: data.candidates[0].content.parts[0].text,
+      model: this.model,
+      usage: data.usageMetadata
+    };
+  }
+
+  buildPrompt(prompt, context) {
+    return `You are a helpful AI personal assistant with these traits:
+- Friendly, witty, and motivating
+- Remember user's goals and habits
+- Provide practical advice and encouragement
+- Keep responses concise but warm
+- Adapt your tone to the user's mood
+- Help with productivity, habits, and personal growth
+
+Context about the user: ${JSON.stringify(context.userInfo || {})}
+Recent conversation: ${JSON.stringify(context.recentMessages || [])}
+
+User message: ${prompt}
+
+Respond naturally as their AI companion:`;
+  }
+}

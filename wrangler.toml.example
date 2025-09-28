@@ -1,0 +1,27 @@
+name = "telegram-ai-assistant"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "telegram-ai-bot"
+database_id = [prod-db-id]
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = [prod-kv-id]
+
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "telegram-ai-bot"
+database_id = [dev-db-id]
+
+[[env.development.kv_namespaces]]
+binding = "KV"
+preview_id = [dev-kv-id]
