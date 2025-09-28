@@ -3,7 +3,7 @@ node_modules/
 
 # Wrangler
 .wrangler/
-.toml
+*.toml
 
 # Environment variables
 .env
