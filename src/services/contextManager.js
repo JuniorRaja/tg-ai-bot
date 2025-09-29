@@ -22,8 +22,8 @@ export class ContextManager {
         timestamp: conv.timestamp
       }));
 
-      // Get user preferences from KV (cached)
-      const userPrefs = await this.kv.get(`user_prefs_${userId}`, 'json') || {};
+      // Get user preferences from KV (cached) - only if KV is available
+      const userPrefs = this.kv ? await this.kv.get(`user_prefs_${userId}`, 'json') || {} : {};
 
       return {
         recentMessages: recentMessages.reverse(),

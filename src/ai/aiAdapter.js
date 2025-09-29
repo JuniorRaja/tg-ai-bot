@@ -15,24 +15,19 @@ export class AIAdapter {
   async generateResponse(prompt, context = {}, options = {}) {
     const provider = options.provider || this.defaultProvider;
 
-    console.log(`[INFO] Generating AI response using ${provider} (prompt length: ${prompt.length} chars)`);
-
     try {
       const response = await this.providers[provider].generateResponse(prompt, context, options);
-      console.log(`[INFO] AI response generated successfully (content length: ${response.content.length} chars)`);
       return response;
     } catch (error) {
-      console.error(`[ERROR] ${provider} failed:`, error);
+      console.error(`AI generation with ${provider} failed:`, error);
 
       // Try fallback provider
       if (provider !== this.fallbackProvider) {
-        console.log(`[INFO] Falling back to ${this.fallbackProvider}`);
         try {
           const response = await this.providers[this.fallbackProvider].generateResponse(prompt, context, options);
-          console.log(`[INFO] Fallback AI response generated successfully`);
           return response;
         } catch (fallbackError) {
-          console.error(`[ERROR] ${this.fallbackProvider} also failed:`, fallbackError);
+          console.error(`Fallback AI generation with ${this.fallbackProvider} also failed:`, fallbackError);
           throw new Error('All AI providers failed');
         }
       }
@@ -43,29 +38,29 @@ export class AIAdapter {
   async analyzeMessage(message, context = {}) {
     console.log(`[INFO] Sending analysis prompt to AI for message: "${message}"`);
 
-    const analysisPrompt = `Analyze this user message and respond with ONLY a JSON object (no markdown, no extra text):
+    const analysisPrompt = 
+    `Analyze this user message and respond with ONLY a JSON object (no markdown, no extra text):
+    Message: "${message}"
 
-Message: "${message}"
+    Return JSON with this exact structure:
+    {
+      "intent": "reminder|habit_report|question|task|greeting|report_request|general_chat",
+      "entities": {
+        "times": [],
+        "dates": [],
+        "habits": [],
+        "tasks": []
+      },
+      "sentiment": "positive|neutral|negative",
+      "action": "create_reminder|track_habit|create_task|none"
+    }
 
-Return JSON with this exact structure:
-{
-  "intent": "reminder|habit_report|question|task|greeting|report_request|general_chat",
-  "entities": {
-    "times": [],
-    "dates": [],
-    "habits": [],
-    "tasks": []
-  },
-  "sentiment": "positive|neutral|negative",
-  "action": "create_reminder|track_habit|create_task|none"
-}
-
-Rules:
-- If message contains "remind me", set action to "create_reminder"
-- If message mentions exercise/gym/meditation/reading, set action to "track_habit"
-- If message contains "need to"/"have to", set action to "create_task"
-- Extract any time/date mentions in entities.times and entities.dates
-- Return ONLY the JSON object, nothing else`;
+    Rules:
+    - If message contains "remind me", set action to "create_reminder"
+    - If message mentions exercise/gym/meditation/reading, set action to "track_habit"
+    - If message contains "need to"/"have to", set action to "create_task"
+    - Extract any time/date mentions in entities.times and entities.dates
+    - Return ONLY the JSON object, nothing else`;
 
     try {
       const response = await this.generateResponse(analysisPrompt, {}, {
@@ -117,7 +112,9 @@ Rules:
       intent = 'habit_report';
       action = 'track_habit';
     } else if (lowerMessage.includes('need to') || lowerMessage.includes('have to') ||
-      lowerMessage.includes('must')) {
+      lowerMessage.includes('must') || lowerMessage.includes('should') ||
+      lowerMessage.includes('todo') ||
+      (lowerMessage.includes('add') && lowerMessage.includes('task'))) {
       intent = 'task';
       action = 'create_task';
     } else if (lowerMessage.includes('?')) {
@@ -183,11 +180,11 @@ Rules:
   extractHabits(message) {
     const habits = [];
     const habitKeywords = {
-      'exercise': ['gym', 'workout', 'exercise', 'fitness', 'run', 'jog'],
+      'exercise': ['gym', 'workout', 'exercise', 'fitness', 'run', 'jog', 'skipping'],
       'meditation': ['meditate', 'meditation', 'mindfulness'],
       'reading': ['read', 'reading', 'book'],
       'water': ['water', 'hydrate'],
-      'sleep': ['sleep', 'slept'],
+      'sleep': ['sleep', 'slept', 'nap'],
       'coding': ['code', 'coding', 'programming'],
       'writing': ['write', 'writing', 'journal']
     };

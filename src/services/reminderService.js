@@ -25,22 +25,28 @@ export class ReminderService {
   }
 
   parseNaturalLanguage(text) {
-    // Simple natural language parsing - can be enhanced
-    const reminderPattern = /remind me to (.+?) (?:tomorrow|in (\d+) (hours?|minutes?|days?)|at (\d+):?(\d+)?\s*(am|pm)?)/i;
-    const match = text.match(reminderPattern);
-    
-    if (!match) return null;
+    const lowerText = text.toLowerCase();
+    const hasRemind = lowerText.includes('remind me');
 
-    const message = match[1].trim();
+    if (!hasRemind && !lowerText.includes('reminder')) return null;
+
+    // Extract message after "remind me"
+    const messagePattern = /remind me(?: to)? (.+)/i;
+    const messageMatch = text.match(messagePattern);
+    let message = messageMatch ? messageMatch[1].trim() : text.replace(/remind(me|er)\s*/i, '').trim();
+    if (!message || message.length < 3) message = text.replace(/remind(me|er)\s*/i, '').trim();
+
     let remindAt = new Date();
 
-    if (text.includes('tomorrow')) {
+    // Extract time - look for tomorrow, in X hours/days, at time
+    if (lowerText.includes('tomorrow')) {
       remindAt.setDate(remindAt.getDate() + 1);
-      remindAt.setHours(9, 0, 0, 0); // Default to 9 AM
-    } else if (match[2]) {
-      const amount = parseInt(match[2]);
-      const unit = match[3].toLowerCase();
-      
+      remindAt.setHours(9, 0, 0, 0); // Default 9 AM
+    } else if (lowerText.includes('in') && /\bin (\d+) (hours?|minutes?|days?)/i.test(text)) {
+      const timeMatch = text.match(/\bin (\d+) (hours?|minutes?|days?)/i);
+      const amount = parseInt(timeMatch[1]);
+      const unit = timeMatch[2].toLowerCase();
+
       if (unit.startsWith('hour')) {
         remindAt.setHours(remindAt.getHours() + amount);
       } else if (unit.startsWith('minute')) {
@@ -48,23 +54,28 @@ export class ReminderService {
       } else if (unit.startsWith('day')) {
         remindAt.setDate(remindAt.getDate() + amount);
       }
-    } else if (match[4]) {
-      let hour = parseInt(match[4]);
-      const minute = parseInt(match[5]) || 0;
-      const ampm = match[6];
-      
+    } else if (lowerText.includes('at') && /\bat (\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.test(text)) {
+      const timeMatch = text.match(/\bat (\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+      let hour = parseInt(timeMatch[1]);
+      const minute = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+      const ampm = timeMatch[3];
+
       if (ampm && ampm.toLowerCase() === 'pm' && hour !== 12) {
         hour += 12;
       } else if (ampm && ampm.toLowerCase() === 'am' && hour === 12) {
         hour = 0;
       }
-      
+
       remindAt.setHours(hour, minute, 0, 0);
-      
+
       // If time has passed today, set for tomorrow
       if (remindAt < new Date()) {
         remindAt.setDate(remindAt.getDate() + 1);
       }
+    } else {
+      // No time specified, set to tomorrow 9 AM
+      remindAt.setDate(remindAt.getDate() + 1);
+      remindAt.setHours(9, 0, 0, 0);
     }
 
     return {
