@@ -2,7 +2,7 @@ export class GroqClient {
   constructor(apiKey) {
     this.apiKey = apiKey;
     this.baseURL = 'https://api.groq.com/openai/v1';
-    this.model = 'llama-3.1-70b-versatile'; // or 'mixtral-8x7b-32768'
+    this.model = 'llama-3.3-70b-versatile'; // or 'mixtral-8x7b-32768'
   }
 
   async generateResponse(prompt, context = {}, options = {}) {

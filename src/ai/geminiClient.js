@@ -1,8 +1,8 @@
 export class GeminiClient {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.baseURL = 'https://generativelanguage.googleapis.com/v1beta';
-    this.model = 'gemini-1.5-flash'; // or 'gemini-1.5-pro'
+    this.baseURL = 'https://generativelanguage.googleapis.com/v1';
+    this.model = 'gemini-2.5-flash'; // or 'gemini-2.5-pro'
   }
 
   async generateResponse(prompt, context = {}, options = {}) {
