@@ -23,7 +23,7 @@ Create in Cloudflare Web Portals > Secrets Store
 wrangler d1 migrations apply telegram-ai-bot-dev --env development --remote
 wrangler d1 migrations apply telegram-ai-bot-dev --env production --remote
 
-wrangler deploy -env=development
+wrangler deploy --env development
 
 https://<your-worker-name>.<your-subdomain>.workers.dev
 https://telegram-ai-assistant-development.imprasannarajendran.workers.dev/webhook
@@ -33,3 +33,5 @@ https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/setWebhook?url=[WORKER-URL]
 https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/getWebhookInfo"
 
 https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/getMe"
+
+wrangler tail --env=development

@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:dev": "wrangler deploy --env development",
     "db:migrate": "wrangler d1 migrations apply telegram-ai-bot --env production",
     "db:migrate:dev": "wrangler d1 migrations apply telegram-ai-bot-dev --env development --remote"
   },
