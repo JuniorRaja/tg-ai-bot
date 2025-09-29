@@ -13,19 +13,24 @@ export class AIAdapter {
 
   async generateResponse(prompt, context = {}, options = {}) {
     const provider = options.provider || this.defaultProvider;
-    
+    console.log(`[INFO] Generating AI response using ${provider} (prompt length: ${prompt.length} chars)`);
+
     try {
-      return await this.providers[provider].generateResponse(prompt, context, options);
+      const response = await this.providers[provider].generateResponse(prompt, context, options);
+      console.log(`[INFO] AI response generated successfully (content length: ${response.content.length} chars)`);
+      return response;
     } catch (error) {
-      console.error(`${provider} failed:`, error);
-      
+      console.error(`[ERROR] AI provider ${provider} failed:`, error);
+
       // Try fallback provider
       if (provider !== this.fallbackProvider) {
-        console.log(`Falling back to ${this.fallbackProvider}`);
+        console.log(`[WARN] Falling back to ${this.fallbackProvider}`);
         try {
-          return await this.providers[this.fallbackProvider].generateResponse(prompt, context, options);
+          const fallbackResponse = await this.providers[this.fallbackProvider].generateResponse(prompt, context, options);
+          console.log(`[INFO] Fallback AI response generated successfully (content length: ${fallbackResponse.content.length} chars)`);
+          return fallbackResponse;
         } catch (fallbackError) {
-          console.error(`${this.fallbackProvider} also failed:`, fallbackError);
+          console.error(`[ERROR] Fallback AI provider ${this.fallbackProvider} also failed:`, fallbackError);
           throw new Error('All AI providers failed');
         }
       }
@@ -34,6 +39,7 @@ export class AIAdapter {
   }
 
   async analyzeMessage(message, context = {}) {
+    console.log('[INFO] Preparing AI analysis prompt for message');
     const analysisPrompt = `
 Analyze this message for:
 1. Intent (question, task, reminder, habit report, casual chat)
@@ -47,20 +53,26 @@ Context: ${JSON.stringify(context)}
 Respond with JSON only:
 `;
 
+    console.log(`[INFO] Sending analysis prompt to AI for message: "${message}"`);
     try {
-      const response = await this.generateResponse(analysisPrompt, {}, { 
+      const response = await this.generateResponse(analysisPrompt, {}, {
         temperature: 0.1,
-        maxTokens: 200 
+        maxTokens: 200
       });
-      return JSON.parse(response.content);
+      const parsedAnalysis = JSON.parse(response.content);
+      console.log(`[INFO] AI analysis result parsed: ${JSON.stringify(parsedAnalysis)}`);
+      return parsedAnalysis;
     } catch (error) {
+      console.error('[ERROR] AI message analysis failed, using fallback analysis');
       // Fallback to simple analysis
-      return {
+      const fallbackAnalysis = {
         intent: 'casual_chat',
         entities: [],
         sentiment: 'neutral',
         action: 'none'
       };
+      console.log(`[INFO] Fallback analysis used: ${JSON.stringify(fallbackAnalysis)}`);
+      return fallbackAnalysis;
     }
   }
 }

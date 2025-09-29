@@ -8,7 +8,7 @@
     "db:migrate:dev": "wrangler d1 migrations apply telegram-ai-bot-dev --env development --remote"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^3.114.14"
   },
   "main": "index.js",
   "keywords": [],

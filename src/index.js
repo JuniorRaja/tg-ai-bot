@@ -38,15 +38,20 @@ export default {
 
 async function handleTelegramUpdate(update, env) {
   try {
+    console.log('[INFO] Incoming Telegram update:', JSON.stringify(update, null, 2));
+
     if (update.message) {
+      console.log(`[INFO] Processing message from user ${update.message.from.id}: "${update.message.text || '[non-text message]'}"`);
       await messageHandler(update.message, env);
     } else if (update.callback_query) {
+      console.log(`[INFO] Processing callback query from user ${update.callback_query.from.id}: ${update.callback_query.data}`);
       await callbackHandler(update.callback_query, env);
     }
-    
+
+    console.log('[INFO] Telegram update processed successfully');
     return new Response('OK', { status: 200 });
   } catch (error) {
-    console.error('Telegram update error:', error);
+    console.error('[ERROR] Telegram update error:', error);
     return new Response('Error', { status: 500 });
   }
 }

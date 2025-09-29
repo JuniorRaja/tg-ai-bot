@@ -8,18 +8,24 @@ export async function callbackHandler(callbackQuery, env) {
   const chatId = callbackQuery.message.chat.id;
   const messageId = callbackQuery.message.message_id;
   const data = callbackQuery.data;
-  
+
+  console.log(`[INFO] Processing callback query from user ${telegramId}: ${data}`);
+
   try {
     // Get user from database
+    console.log(`[INFO] Looking up user ${telegramId} in database`);
     const user = await getUserFromDB(env.DB, telegramId);
     if (!user) {
+      console.log(`[WARN] User ${telegramId} not found in database`);
       await answerCallbackQuery(callbackQuery.id, "User not found. Please start the bot first.", env.TELEGRAM_BOT_TOKEN);
       return;
     }
+    console.log(`[INFO] User ${telegramId} found: ${user.first_name}`);
 
     // Parse callback data
     const [action, ...params] = data.split(':');
-    
+    console.log(`[INFO] Parsed callback action: ${action}, params: ${params.join(', ')}`);
+
     switch (action) {
       case 'habit_confirm':
         await handleHabitConfirmation(params, user, callbackQuery, env);
@@ -57,9 +63,12 @@ export async function callbackHandler(callbackQuery, env) {
 async function handleHabitConfirmation(params, user, callbackQuery, env) {
   const [habitName, action] = params;
   const habitTracker = new HabitTracker(env.DB);
-  
+
+  console.log(`[INFO] Handling habit confirmation for ${habitName}, action: ${action}`);
+
   if (action === 'yes') {
     await habitTracker.recordHabit(user.id, habitName);
+    console.log(`[INFO] Habit ${habitName} recorded for user ${user.id}`);
     
     const keyboard = {
       inline_keyboard: [[
