@@ -244,7 +244,7 @@ async function handleCommand(message, user, env) {
       return "📝 **Your Tasks:**\n" + tasks.map((task, i) => `${i+1}. ${task.title}\n   ${task.description}`).join('\n\n');
     },
 
-    '/settings': () => {
+    '/settings': async () => {
       const keyboard = {
         inline_keyboard: [
           [
@@ -263,7 +263,7 @@ async function handleCommand(message, user, env) {
       };
       
       // Send message with keyboard
-      sendTelegramMessage(chatId, "⚙️ **Settings Menu:**\n\nChoose an option below:", env.TELEGRAM_BOT_TOKEN, { keyboard });
+      await sendTelegramMessage(chatId, "⚙️ **Settings Menu:**\n\nChoose an option below:", env.TELEGRAM_BOT_TOKEN, { keyboard });
       return null; // Don't send additional message
     }
   };
