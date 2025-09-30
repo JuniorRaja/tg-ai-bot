@@ -25,3 +25,11 @@ database_id = [dev-db-id]
 [[env.development.kv_namespaces]]
 binding = "KV"
 preview_id = [dev-kv-id]
+
+[triggers]
+crons = [
+  "*/5 * * * *",    # Every 5 minutes (reminders)
+  "0 8 * * *",      # 8 AM daily (reports)
+  "0 9 * * 1",      # 9 AM Mondays (weekly reports)
+  "0 2 * * *"       # 2 AM daily (cleanup)
+]
