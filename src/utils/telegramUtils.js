@@ -71,7 +71,7 @@ export async function editTelegramMessage(chatId, messageId, text, botToken, key
   }
 }
 
-export async function answerCallbackQuery(callbackQueryId, text, botToken, showAlert = false) {
+export async function answerCallbackQuery(callbackQueryId, text, botToken, showAlert = true) {
   const url = `https://api.telegram.org/bot${botToken}/answerCallbackQuery`;
   
   try {
