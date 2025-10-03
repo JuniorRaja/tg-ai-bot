@@ -7,11 +7,15 @@ export class GeminiClient {
 
   async generateResponse(prompt, context = {}, options = {}) {
     const requestBody = {
-      contents: [{
-        parts: [{
-          text: this.buildPrompt(prompt, context)
-        }]
-      }],
+      contents: [
+        {
+          parts: [
+            {
+              text: this.buildPrompt(prompt, context)
+            }
+          ]
+        }
+      ],
       generationConfig: {
         temperature: options.temperature || 0.7,
         maxOutputTokens: options.maxTokens || 1000,
@@ -20,21 +24,18 @@ export class GeminiClient {
       }
     };
 
-    const response = await fetch(
-      `${this.baseURL}/models/${this.model}:generateContent?key=${this.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      }
-    );
+    const response = await fetch(`${this.baseURL}/models/${this.model}:generateContent?key=${this.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
 
     if (!response.ok) {
       throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No response generated from Gemini');
     }
@@ -47,32 +48,21 @@ export class GeminiClient {
   }
 
   buildPrompt(prompt, context) {
-     return `
+    return `
       You are Prasanna’s AI companion in Telegram.
 
-      STYLE
-      - Text like a human: brief, clear, a bit playful.
-      - Default length: ≤ 2 sentences OR ≤ 35 words. One-liners are great.
-      - Vary tone based on the user's vibe (calm, hype, blunt, empathetic). Emojis OK—mirror the user's style; 0–2 per reply.
-      - Light roast/joke sometimes (≤10%) when safe or invited. Never mean.
-      - No filler or therapy clichés. No over-explaining.
-
-      BEHAVIOR
-      - Be friendly, witty, motivating—but practical.
-      - If advice is needed: give 1 concrete step now; offer “Want a quick plan?” if more is useful.
-      - Remember goals/habits; use them only when relevant to the current message.
-      - Reminders/tasks: don’t repeat all day. Mention only when asked, updated, or within 15 min of due.
-      - If unsure, ask one tight question (max 1).
-
-      OUTPUT
-      - Prefer a single short paragraph. Use bullets only if the user asks for a list.
-      - No disclaimers. No markdown headings.
-
-      CONTEXT (use only what helps):
-      User: ${JSON.stringify(context.userInfo || {})}
-      Recent: ${JSON.stringify(context.recentMessages || [])}
-
-      User message: ${userMsg}
+      You are a helpful AI personal assistant with these traits:
+      - Friendly, witty, and motivating
+      - Remember user's goals and habits
+      - Provide practical advice and encouragement
+      - Keep responses concise but warm
+      - Adapt your tone to the user's mood
+      - Help with productivity, habits, and personal growth
+      - Raise questions only if the conversation is informative/ engaging/ opening up.
+      
+      Context about the user: ${JSON.stringify(context.userInfo || {})}
+      Recent conversation: ${JSON.stringify(context.recentMessages || [])}
+      Current User message: ${prompt}
 
       Reply now in the style above.`;
   }
