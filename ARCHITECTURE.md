@@ -50,45 +50,45 @@ The bot leverages AI to understand user intent from natural language, automatica
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Telegram Platform                       │
+│                    Telegram Platform                        │
 └────────────────────────┬────────────────────────────────────┘
                          │ Webhook/Updates
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   Cloudflare Worker                          │
+│                   Cloudflare Worker                         │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │            Entry Point (src/index.js)                  │ │
 │  │  • HTTP Request Handler (fetch)                        │ │
 │  │  • Cron Job Handler (scheduled)                        │ │
 │  └────────────┬──────────────────┬────────────────────────┘ │
-│               │                  │                           │
-│       ┌───────▼──────┐   ┌──────▼────────┐                 │
-│       │   Message    │   │   Callback    │                 │
-│       │   Handler    │   │   Handler     │                 │
-│       └───────┬──────┘   └──────┬────────┘                 │
-│               │                  │                           │
+│               │                  │                          │
+│       ┌───────▼──────┐   ┌──────▼────────┐                  │
+│       │   Message    │   │   Callback    │                  │
+│       │   Handler    │   │   Handler     │                  │
+│       └───────┬──────┘   └──────┬────────┘                  │
+│               │                  │                          │
 │       ┌───────▼──────────────────▼────────┐                 │
-│       │        Service Layer               │                 │
-│       │  ┌──────────┐  ┌──────────────┐  │                 │
-│       │  │Context   │  │ Reminder     │  │                 │
-│       │  │Manager   │  │ Service      │  │                 │
-│       │  └──────────┘  └──────────────┘  │                 │
-│       │  ┌──────────┐  ┌──────────────┐  │                 │
-│       │  │Task      │  │ Habit        │  │                 │
-│       │  │Service   │  │ Tracker      │  │                 │
-│       │  └──────────┘  └──────────────┘  │                 │
-│       │  ┌──────────┐  ┌──────────────┐  │                 │
-│       │  │Report    │  │ AI Adapter   │  │                 │
-│       │  │Generator │  │ (Groq/Gemini)│  │                 │
-│       │  └──────────┘  └──────────────┘  │                 │
+│       │        Service Layer              │                 │
+│       │  ┌──────────┐  ┌──────────────┐   │                 │
+│       │  │Context   │  │ Reminder     │   │                 │
+│       │  │Manager   │  │ Service      │   │                 │
+│       │  └──────────┘  └──────────────┘   │                 │
+│       │  ┌──────────┐  ┌──────────────┐   │                 │
+│       │  │Task      │  │ Habit        │   │                 │
+│       │  │Service   │  │ Tracker      │   │                 │
+│       │  └──────────┘  └──────────────┘   │                 │
+│       │  ┌──────────┐  ┌──────────────┐   │                 │
+│       │  │Report    │  │ AI Adapter   │   │                 │
+│       │  │Generator │  │ (Groq/Gemini)│   │                 │
+│       │  └──────────┘  └──────────────┘   │                 │
 │       └────────────────┬──────────────────┘                 │
-│                        │                                     │
+│                        │                                    │
 │       ┌────────────────▼─────────────────┐                  │
 │       │        Storage Layer             │                  │
-│       │  ┌────────────┐  ┌────────────┐ │                  │
-│       │  │ D1 Database│  │  KV Store  │ │                  │
-│       │  │  (SQLite)  │  │  (Cache)   │ │                  │
-│       │  └────────────┘  └────────────┘ │                  │
+│       │  ┌────────────┐  ┌────────────┐  │                  │
+│       │  │ D1 Database│  │  KV Store  │  │                  │
+│       │  │  (SQLite)  │  │  (Cache)   │  │                  │
+│       │  └────────────┘  └────────────┘  │                  │
 │       └──────────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────┘
                          │
@@ -609,16 +609,7 @@ uploaded_at     DATETIME
 - Optional due dates
 
 ### 4. **Habit Tracking**
-- Pattern-based automatic habit detection
-- Supported habits:
-  - Exercise (gym, workout, fitness, running)
-  - Meditation (meditate, mindfulness)
-  - Reading (read, book)
-  - Water (hydration tracking)
-  - Sleep (sleep duration)
-  - Coding (programming, development)
-  - Writing (journal, blog)
-- Daily entry logging (prevents duplicates)
+- Daily entry logging (TODO: prevents duplicates)
 - Habit statistics and streaks
 - Habit history visualization
 - Manual habit confirmation via inline buttons
@@ -786,46 +777,6 @@ wrangler d1 execute telegram-ai-bot-dev --local --file=./test-query.sql
 - Database queries via Wrangler CLI
 - Log monitoring via Cloudflare dashboard
 
-### Production Monitoring
-- Cloudflare Workers dashboard for metrics
-- Real-time logs and error tracking
-- Performance analytics
-
----
-
-## Future Enhancements
-
-1. **Advanced Features**
-   - Voice message transcription and AI analysis
-   - Image recognition and description
-   - Multi-language support
-   - User-to-user sharing and collaboration
-
-2. **Analytics and Insights**
-   - Advanced habit analytics with visualizations
-   - Productivity metrics
-   - Goal completion tracking
-   - Weekly/monthly trend analysis
-
-3. **Integrations**
-   - Calendar integration (Google Calendar, Outlook)
-   - Task management tools (Todoist, Trello)
-   - Fitness apps integration
-   - Weather API for context-aware reminders
-
-4. **Enhanced AI**
-   - Custom fine-tuned models
-   - Personality customization
-   - Multi-turn conversation improvements
-   - Memory summarization for long-term context
-
-5. **User Experience**
-   - Custom keyboards
-   - Rich media responses (charts, graphs)
-   - Notification grouping
-   - Push notification preferences
-
----
 
 ## Conclusion
 

@@ -1,7 +1,7 @@
 # 🤖 Telegram AI Assistant Bot
 
 A powerful, serverless Telegram bot powered by multiple AI models (Groq, Gemini) running on Cloudflare Workers. Built for speed, scalability, and easy deployment.
-Foucsed on being your Personal Assitant, Coach and Chat buddy who gathers infomation from normal conversations with the bot. Capable of chatting, reminding, track habits and even store documents and media.
+Focused on being your Personal Assistant, Coach and Chat buddy who gathers information from normal conversations with the bot. Capable of chatting, reminding, track habits and even store documents and media.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com/)
@@ -178,7 +178,7 @@ https://<your-worker-name>.<your-subdomain>.workers.dev
 Set the webhook:
 
 ```bash
-https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/setWebhook?url=[WORKER-URL]
+https://api.telegram.org/bot[TELEGRAM_BOT_TOKEN]/setWebhook?url=[WORKER-URL]/webhook
 ```
 
 ### Step 9: Verify Setup
