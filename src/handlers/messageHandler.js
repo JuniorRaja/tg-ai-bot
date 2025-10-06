@@ -10,7 +10,7 @@ import { sendTelegramMessage } from '../utils/telegramUtils.js';
 export async function messageHandler(message, env) {
   const telegramId = message.from.id.toString();
   const chatId = message.chat.id;
-  
+
   try {
     // Get or create user
     let user = await getUserFromDB(env.DB, telegramId);
@@ -31,7 +31,16 @@ export async function messageHandler(message, env) {
 
     // Handle different message types
     if (message.text) {
-      await handleTextMessage(message, user, aiAdapter, contextManager, habitTracker, reminderService, taskService, env);
+      await handleTextMessage(
+        message,
+        user,
+        aiAdapter,
+        contextManager,
+        habitTracker,
+        reminderService,
+        taskService,
+        env
+      );
     } else if (message.photo) {
       await handlePhotoMessage(message, user, aiAdapter, contextManager, env);
     } else if (message.document) {
@@ -39,14 +48,22 @@ export async function messageHandler(message, env) {
     } else if (message.voice) {
       await handleVoiceMessage(message, user, aiAdapter, contextManager, env);
     }
-
   } catch (error) {
     console.error('Message handler error:', error);
-    await sendTelegramMessage(chatId, "Sorry, I encountered an error. Please try again.", env.TELEGRAM_BOT_TOKEN);
+    await sendTelegramMessage(chatId, 'Sorry, I encountered an error. Please try again.', env.TELEGRAM_BOT_TOKEN);
   }
 }
 
-async function handleTextMessage(message, user, aiAdapter, contextManager, habitTracker, reminderService, taskService, env) {
+async function handleTextMessage(
+  message,
+  user,
+  aiAdapter,
+  contextManager,
+  habitTracker,
+  reminderService,
+  taskService,
+  env
+) {
   const text = message.text;
   const chatId = message.chat.id;
 
@@ -55,19 +72,44 @@ async function handleTextMessage(message, user, aiAdapter, contextManager, habit
     return await handleCommand(message, user, env);
   }
 
-  // Get conversation context
+  // Get User context
   const context = await contextManager.getContext(user.id);
 
   // Analyze message for intents
   const analysis = await aiAdapter.analyzeMessage(text, context);
 
-  // Process specific actions first
-  if (analysis.action === 'create_reminder') {
-    const reminder = await reminderService.parseAndCreateReminder(text, user.id);
-    if (reminder) {
-      await sendTelegramMessage(chatId, `✅ Reminder set: "${reminder.message}" at ${new Date(reminder.remind_at).toLocaleString()}`, env.TELEGRAM_BOT_TOKEN);
-    } else {
-      console.error(`Failed to create reminder for user ${user.id}, message: "${text}", analysis:`, analysis);
+  // Process reminder
+  if (analysis.action === 'create_reminder' || analysis.action === 'update_reminder') {
+   
+    // Reminder Creation
+    if (analysis && analysis.action === 'create_reminder') {
+      const result = await reminderService.createReminder(text, user.id, aiAdapter);
+
+      if (result) {
+        const reminderTime = new Date(result.remindAt).toLocaleString();
+        await sendTelegramMessage(
+          chatId,
+          `✅ Reminder set!\n\n📝 *${result.description}*\n⏰ ${reminderTime}${
+            result.notes ? `\n📋 ${result.notes}` : ''
+          }`,
+          env.TELEGRAM_BOT_TOKEN
+        );
+      } else {
+        await sendTelegramMessage(chatId, '❌ Could not create reminder. Please try again.', env.TELEGRAM_BOT_TOKEN);
+      }
+    }
+    // Reminder Modification
+    else {
+      const modifyResult = await reminderService.modifyReminder(user.id, text, aiAdapter);
+      if (modifyResult && modifyResult.success) {
+        await sendTelegramMessage(chatId, modifyResult.message, env.TELEGRAM_BOT_TOKEN);
+      } else {
+        await sendTelegramMessage(
+          chatId,
+          "❌ Could not process reminder request. Try: 'Remind me to [task] at [time]' or 'Update [reminder name] to [new time]'",
+          env.TELEGRAM_BOT_TOKEN
+        );
+      }
     }
   }
 
@@ -109,10 +151,14 @@ async function handlePhotoMessage(message, user, aiAdapter, contextManager, env)
 
   try {
     // Store photo in database
-    await env.DB.prepare(`
+    await env.DB.prepare(
+      `
       INSERT INTO files (user_id, file_id, file_type, file_size, description)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(user.id, fileId, 'photo', fileSize, caption).run();
+    `
+    )
+      .bind(user.id, fileId, 'photo', fileSize, caption)
+      .run();
 
     console.log(`Photo saved for user ${user.id}: ${fileId}`);
   } catch (error) {
@@ -123,7 +169,9 @@ async function handlePhotoMessage(message, user, aiAdapter, contextManager, env)
 
   // Generate response about the photo
   const response = await aiAdapter.generateResponse(
-    `User shared a photo${caption ? ` with caption: "${caption}"` : ''}. Respond encouragingly and ask relevant questions if appropriate.`,
+    `User shared a photo${
+      caption ? ` with caption: "${caption}"` : ''
+    }. Respond encouragingly and ask relevant questions if appropriate.`,
     { userInfo: { name: user.first_name } }
   );
 
@@ -138,15 +186,23 @@ async function handleDocumentMessage(message, user, aiAdapter, contextManager, e
 
   try {
     // Store document in database
-    await env.DB.prepare(`
+    await env.DB.prepare(
+      `
       INSERT INTO files (user_id, file_id, file_type, file_size, description)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(user.id, fileId, 'document', fileSize, fileName).run();
+    `
+    )
+      .bind(user.id, fileId, 'document', fileSize, fileName)
+      .run();
 
     console.log(`Document saved for user ${user.id}: ${fileId}`);
   } catch (error) {
     console.error('Error saving document:', error);
-    await sendTelegramMessage(chatId, "Sorry, I couldn't save your document. Please try again.", env.TELEGRAM_BOT_TOKEN);
+    await sendTelegramMessage(
+      chatId,
+      "Sorry, I couldn't save your document. Please try again.",
+      env.TELEGRAM_BOT_TOKEN
+    );
     return;
   }
 
@@ -167,15 +223,23 @@ async function handleVoiceMessage(message, user, aiAdapter, contextManager, env)
 
   try {
     // Store voice message in database
-    await env.DB.prepare(`
+    await env.DB.prepare(
+      `
       INSERT INTO files (user_id, file_id, file_type, file_size, description)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(user.id, fileId, 'voice', fileSize, `Voice message (${duration}s)`).run();
+    `
+    )
+      .bind(user.id, fileId, 'voice', fileSize, `Voice message (${duration}s)`)
+      .run();
 
     console.log(`Voice message saved for user ${user.id}: ${fileId}`);
   } catch (error) {
     console.error('Error saving voice message:', error);
-    await sendTelegramMessage(chatId, "Sorry, I couldn't save your voice message. Please try again.", env.TELEGRAM_BOT_TOKEN);
+    await sendTelegramMessage(
+      chatId,
+      "Sorry, I couldn't save your voice message. Please try again.",
+      env.TELEGRAM_BOT_TOKEN
+    );
     return;
   }
 
@@ -191,43 +255,77 @@ async function handleVoiceMessage(message, user, aiAdapter, contextManager, env)
 async function handleCommand(message, user, env) {
   const chatId = message.chat.id;
   const command = message.text.split(' ')[0];
-  
+  const args = message.text.split(' ').slice(1);
+
   const commands = {
-    '/start': () => `Hey ${user.first_name}! 👋 I'm your AI personal assistant. I can help you with:\n\n📝 Task management\n⏰ Reminders\n💪 Habit tracking\n📊 Daily reports\n💬 Just chatting!\n\nTry saying something like "remind me to call mom tomorrow at 6pm" or tell me about your day!`,
-    
-    '/help': () => `Here's what I can do:\n\n🤖 **Chat**: Just talk to me naturally!\n⏰ **Reminders**: "remind me to X at Y time"\n� **Tasks**: "add a task to buy milk" or I'll detect them\n�� **Habits**: I'll track habits from your messages\n📊 **Reports**: Ask for daily/weekly summaries\n📁 **Files**: Send me photos, docs, voice messages\n\n**Commands:**\n/tasks - View your tasks\n/habits - View your habits\n/reminders - View pending reminders\n/report - Get today's summary\n/settings - Adjust preferences`,
-    
+    '/start': () =>
+      `Hey ${user.first_name}! 👋 I'm your AI personal assistant. I can help you with:\n\n📝 Task management\n⏰ Reminders\n💪 Habit tracking\n📊 Daily reports\n💬 Just chatting!\n\nTry saying something like "remind me to call mom tomorrow at 6pm" or tell me about your day!`,
+
+    '/help': () =>
+      `Here's what I can do:\n\n🤖 **Chat**: Just talk to me naturally!\n⏰ **Reminders**: "remind me to X at Y time"\n� **Tasks**: "add a task to buy milk" or I'll detect them\n�� **Habits**: I'll track habits from your messages\n📊 **Reports**: Ask for daily/weekly summaries\n📁 **Files**: Send me photos, docs, voice messages\n\n**Commands:**\n/tasks - View your tasks\n/habits - View your habits\n/reminders - View pending reminders\n/report - Get today's summary\n/settings - Adjust preferences`,
+
     '/habits': async () => {
       const habitTracker = new HabitTracker(env.DB);
       const habits = await habitTracker.getUserHabits(user.id);
       if (habits.length === 0) {
         return "No habits tracked yet! I'll automatically detect and track habits from your daily conversations. Try telling me about your workout, reading, or other activities.";
       }
-      return "🏆 **Your Habits:**\n" + habits.map(h => `• ${h.habit_name} (${h.frequency})`).join('\n');
+      return '🏆 **Your Habits:**\n' + habits.map((h) => `• ${h.habit_name} (${h.frequency})`).join('\n');
     },
-    
+
     '/reminders': async () => {
-      const reminders = await env.DB.prepare(`
-        SELECT message, remind_at, status 
-        FROM reminders 
-        WHERE user_id = ? AND status = 'pending'
-        ORDER BY remind_at ASC
-        LIMIT 10
-      `).bind(user.id).all();
-      
-      if (reminders.results.length === 0) {
-        return "⏰ No pending reminders. Try saying 'remind me to X at Y time'!";
+      // Check for filter arguments
+      const filter = args[0] || 'pending';
+
+      const reminderService = new ReminderService(env.DB);
+      const reminders = await reminderService.getUserReminders(user.id, filter);
+
+      if (reminders.length === 0) {
+        const filterText =
+          {
+            pending: 'pending',
+            completed: 'completed',
+            cancelled: 'cancelled',
+            today: 'for today',
+            all: ''
+          }[filter] || filter;
+
+        return `⏰ No ${filterText} reminders found. Try saying 'remind me to X at Y time'!`;
       }
-      
-      let response = "⏰ **Your Pending Reminders:**\n\n";
-      reminders.results.forEach(reminder => {
+
+      let response = '';
+      const statusEmoji = {
+        pending: '⏰',
+        completed: '✅',
+        cancelled: '❌'
+      };
+
+      if (filter === 'today') {
+        response = "⏰ **Today's Pending Reminders:**\n\n";
+      } else if (filter === 'all') {
+        response = '⏰ **All Your Reminders:**\n\n';
+      } else {
+        const statusText = filter.charAt(0).toUpperCase() + filter.slice(1);
+        response = `${statusEmoji[filter] || '⏰'} **Your ${statusText} Reminders:**\n\n`;
+      }
+
+      reminders.forEach((reminder) => {
         const date = new Date(reminder.remind_at).toLocaleString();
-        response += `• ${reminder.message}\n  📅 ${date}\n\n`;
+        const title = reminder.description;
+        response += `📝 *${title}*\n`;
+        response += `   📅 ${date}\n`;
+        if (reminder.notes) {
+          response += `   📋 ${reminder.notes}\n`;
+        }
+        response += `   🆔 ID: ${reminder.id}\n\n`;
       });
-      
+
+      // Add usage hints
+      response += '*Usage:* `/reminders pending|completed|cancelled|today|all`';
+
       return response;
     },
-    
+
     '/report': async () => {
       const { ReportGenerator } = await import('../services/reportGenerator.js');
       const reportGen = new ReportGenerator(env.DB);
@@ -241,38 +339,43 @@ async function handleCommand(message, user, env) {
       if (tasks.length === 0) {
         return "📝 No tasks yet. Try saying 'add a task to buy milk'! Or allow me to detect tasks from your messages.";
       }
-      return "📝 **Your Tasks:**\n" + tasks.map((task, i) => `${i+1}. ${task.title}\n   ${task.description}`).join('\n\n');
+      return (
+        '📝 **Your Tasks:**\n' + tasks.map((task, i) => `${i + 1}. ${task.title}\n   ${task.description}`).join('\n\n')
+      );
     },
 
     '/settings': async () => {
       const keyboard = {
         inline_keyboard: [
           [
-            { text: "🌍 Timezone", callback_data: "settings:timezone" },
-            { text: "🔔 Notifications", callback_data: "settings:notifications" }
+            { text: '🌍 Timezone', callback_data: 'settings:timezone' },
+            { text: '🔔 Notifications', callback_data: 'settings:notifications' }
           ],
           [
-            { text: "📊 Reports", callback_data: "settings:reports" },
-            { text: "💪 Habits", callback_data: "settings:habits" }
+            { text: '📊 Reports', callback_data: 'settings:reports' },
+            { text: '💪 Habits', callback_data: 'settings:habits' }
           ],
           [
-            { text: "🗑️ Clear Data", callback_data: "settings:clear_data" },
-            { text: "❌ Close", callback_data: "settings:close" }
+            { text: '🗑️ Clear Data', callback_data: 'settings:clear_data' },
+            { text: '❌ Close', callback_data: 'settings:close' }
           ]
         ]
       };
-      
+
       // Send message with keyboard
-      await sendTelegramMessage(chatId, "⚙️ **Settings Menu:**\n\nChoose an option below:", env.TELEGRAM_BOT_TOKEN, { keyboard });
+      await sendTelegramMessage(chatId, '⚙️ **Settings Menu:**\n\nChoose an option below:', env.TELEGRAM_BOT_TOKEN, {
+        keyboard
+      });
       return null; // Don't send additional message
     }
   };
 
-  const response = commands[command] || (() => "Unknown command. Type /help to see available commands.");
-  
+  const response = commands[command] || (() => 'Unknown command. Type /help to see available commands.');
+
   if (typeof response === 'function') {
     const result = await response();
-    if (result) { // Only send message if result is not null
+    if (result) {
+      // Only send message if result is not null
       await sendTelegramMessage(chatId, result, env.TELEGRAM_BOT_TOKEN);
     }
   } else {

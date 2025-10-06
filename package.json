@@ -1,6 +1,7 @@
 {
   "name": "telegram-ai-assistant",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
@@ -9,6 +10,8 @@
     "db:migrate:dev": "wrangler d1 migrations apply telegram-ai-bot-dev --env development --remote"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
     "wrangler": "^4.40.2"
   },
   "main": "index.js",

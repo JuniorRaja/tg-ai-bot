@@ -47,6 +47,49 @@ export class GeminiClient {
     };
   }
 
+  // Raw response method that bypasses the conversational system prompt
+  async generateRawResponse(messages, options = {}) {
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            {
+              text: messages[1]?.content || messages[0]?.content || ''
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: options.temperature || 0.1,
+        maxOutputTokens: options.maxTokens || 300,
+        topP: 0.95,
+        topK: 64
+      }
+    };
+
+    const response = await fetch(`${this.baseURL}/models/${this.model}:generateContent?key=${this.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No response generated from Gemini');
+    }
+
+    return {
+      content: data.candidates[0].content.parts[0].text,
+      model: this.model,
+      usage: data.usageMetadata
+    };
+  }
+
   buildPrompt(prompt, context) {
     return `
       You are Prasanna’s AI companion in Telegram.

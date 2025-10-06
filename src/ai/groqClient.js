@@ -63,6 +63,41 @@ export class GroqClient {
     };
   }
 
+  // Raw response method that bypasses the conversational system prompt
+  async generateRawResponse(messages, options = {}) {
+    const requestBody = {
+      model: options.model || this.model,
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      temperature: options.temperature || 0.1,
+      max_tokens: options.maxTokens || 300,
+      stream: false
+    };
+
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      content: data.choices[0].message.content,
+      model: data.model,
+      usage: data.usage
+    };
+  }
+
   buildMessages(prompt, context) {
     const messages = [];
 

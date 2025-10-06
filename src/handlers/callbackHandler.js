@@ -38,9 +38,21 @@ export async function callbackHandler(callbackQuery, env) {
       case 'reminder_snooze':
         await handleReminderSnooze(params, user, callbackQuery, env);
         break;
-        
+
       case 'reminder_complete':
         await handleReminderComplete(params, user, callbackQuery, env);
+        break;
+
+      case 'reminder_cancel':
+        await handleReminderCancel(params, user, callbackQuery, env);
+        break;
+
+      case 'reminder_confirm_cancel':
+        await handleReminderConfirmCancel(params, user, callbackQuery, env);
+        break;
+
+      case 'reminder_keep':
+        await handleReminderKeep(params, user, callbackQuery, env);
         break;
         
       case 'report_type':
@@ -136,21 +148,73 @@ async function handleReminderSnooze(params, user, callbackQuery, env) {
 
 async function handleReminderComplete(params, user, callbackQuery, env) {
   const [reminderId] = params;
-  
+
   await env.DB.prepare(`
-    UPDATE reminders 
-    SET status = 'completed' 
+    UPDATE reminders
+    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
     WHERE id = ? AND user_id = ?
   `).bind(reminderId, user.id).run();
-  
+
   await editTelegramMessage(
     callbackQuery.message.chat.id,
     callbackQuery.message.message_id,
     "✅ Reminder marked as complete!",
     env.TELEGRAM_BOT_TOKEN
   );
-  
+
   await answerCallbackQuery(callbackQuery.id, "Completed!", env.TELEGRAM_BOT_TOKEN);
+}
+
+async function handleReminderCancel(params, user, callbackQuery, env) {
+  const [reminderId] = params;
+
+  // Get reminder details for confirmation
+  const reminder = await env.DB.prepare(`
+    SELECT * FROM reminders WHERE id = ? AND user_id = ?
+  `).bind(reminderId, user.id).first();
+
+  if (!reminder) {
+    await answerCallbackQuery(callbackQuery.id, "Reminder not found", env.TELEGRAM_BOT_TOKEN);
+    return;
+  }
+
+  // Show confirmation dialog
+  const reminderService = new ReminderService(env.DB);
+  await reminderService.confirmCancellation(reminder, env.TELEGRAM_BOT_TOKEN, callbackQuery.message.chat.id);
+
+  await answerCallbackQuery(callbackQuery.id, "Confirm cancellation", env.TELEGRAM_BOT_TOKEN);
+}
+
+async function handleReminderConfirmCancel(params, user, callbackQuery, env) {
+  const [reminderId] = params;
+
+  await env.DB.prepare(`
+    UPDATE reminders
+    SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND user_id = ?
+  `).bind(reminderId, user.id).run();
+
+  await editTelegramMessage(
+    callbackQuery.message.chat.id,
+    callbackQuery.message.message_id,
+    "❌ Reminder cancelled successfully!",
+    env.TELEGRAM_BOT_TOKEN
+  );
+
+  await answerCallbackQuery(callbackQuery.id, "Cancelled!", env.TELEGRAM_BOT_TOKEN);
+}
+
+async function handleReminderKeep(params, user, callbackQuery, env) {
+  const [reminderId] = params;
+
+  await editTelegramMessage(
+    callbackQuery.message.chat.id,
+    callbackQuery.message.message_id,
+    "✅ Reminder kept active!",
+    env.TELEGRAM_BOT_TOKEN
+  );
+
+  await answerCallbackQuery(callbackQuery.id, "Kept active!", env.TELEGRAM_BOT_TOKEN);
 }
 
 async function handleReportRequest(params, user, callbackQuery, env) {

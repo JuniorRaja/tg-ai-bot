@@ -74,6 +74,40 @@ export class AIAdapter {
     }
   }
 
+  async generateJsonResponse(userPrompt, context, options = {}) {
+    const provider = options.provider || this.defaultProvider;
+
+    try {
+      const messages = [];
+      messages.push({
+        role: 'system',
+        content: userPrompt
+      });
+
+      messages.push({
+        role: 'user',
+        content: context
+      });
+
+      const response = await this.providers[provider].generateRawResponse(messages, options);
+      return response;
+    } catch (error) {
+      console.error(`JSON generation with ${provider} failed:`, error);
+
+      // Try fallback provider
+      if (provider !== this.fallbackProvider) {
+        try {
+          const response = await this.providers[this.fallbackProvider].generateRawResponse(messages, options);
+          return response;
+        } catch (fallbackError) {
+          console.error(`Fallback JSON generation with ${this.fallbackProvider} also failed:`, fallbackError);
+          throw new Error('All AI providers failed');
+        }
+      }
+      throw error;
+    }
+  }
+
   // Enhanced prompt builder with context and examples
   buildAnalysisPrompt(message, context) {
     const currentTime = new Date();
@@ -105,7 +139,7 @@ export class AIAdapter {
           "tasks": ["<task_items>"]
       },
       "sentiment": "positive|neutral|negative",
-      "action": "create_reminder|track_habit|create_task|none"
+      "action": "create_reminder|track_habit|create_task|update_reminder|none"
     }
 
     Rules:
