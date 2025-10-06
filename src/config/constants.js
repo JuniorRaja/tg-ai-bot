@@ -17,8 +17,8 @@ export const Constants = {
   MAX_REMINDERS_PER_USER: 100,
   MAX_FILE_SIZE_MB: 20,
   
-  // Time zones
-  DEFAULT_TIMEZONE: 'UTC',
+  // Time zones - using local/system time
+  DEFAULT_TIMEZONE: 'Local',
   
   // Habit tracking
   HABIT_PATTERNS: {

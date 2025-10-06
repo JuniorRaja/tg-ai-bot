@@ -129,12 +129,12 @@ async function handleReminderSnooze(params, user, callbackQuery, env) {
   
   const snoozeUntil = new Date();
   snoozeUntil.setMinutes(snoozeUntil.getMinutes() + parseInt(minutes));
-  
+
   await env.DB.prepare(`
-    UPDATE reminders 
-    SET remind_at = ?, status = 'pending' 
+    UPDATE reminders
+    SET remind_at = ?, status = 'pending'
     WHERE id = ? AND user_id = ?
-  `).bind(snoozeUntil.toISOString(), reminderId, user.id).run();
+  `).bind(snoozeUntil, reminderId, user.id).run();
   
   await editTelegramMessage(
     callbackQuery.message.chat.id,
@@ -255,7 +255,7 @@ async function handleSettingsMenu(params, user, callbackQuery, env) {
         inline_keyboard: [
           [
             { text: "🌍 UTC", callback_data: "settings:set_timezone:UTC" },
-            { text: "🇺🇸 EST", callback_data: "settings:set_timezone:EST" }
+            { text: "Local", callback_data: "settings:set_timezone:Local" }
           ],
           [
             { text: "🇺🇸 PST", callback_data: "settings:set_timezone:PST" },

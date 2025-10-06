@@ -47,7 +47,7 @@ export class HabitTracker {
       }
 
       // Record today's entry (if not already exists)
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().split('T')[0];
       const existing = await this.db.prepare(`
         SELECT id FROM habit_entries 
         WHERE habit_id = ? AND date(logged_at) = ?

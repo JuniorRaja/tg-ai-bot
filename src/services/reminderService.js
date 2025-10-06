@@ -58,7 +58,7 @@ export class ReminderService {
 
       const reminder = reminders.results[0];
       console.log('Updating reminder:', reminder.description, 'with action:', modifyContext.action);
-      let updateData = { updated_at: new Date().toISOString() };
+      let updateData = { updated_at: new Date() };
 
       switch (modifyContext.action) {
         case 'reschedule':
@@ -73,11 +73,11 @@ export class ReminderService {
           break;
         case 'complete':
           updateData.status = 'completed';
-          updateData.completed_at = new Date().toISOString();
+          updateData.completed_at = new Date();
           break;
         case 'cancel':
           updateData.status = 'cancelled';
-          updateData.cancelled_at = new Date().toISOString();
+          updateData.cancelled_at = new Date();
           break;
         default:
           return { success: false, message: 'Unknown action' };
@@ -124,9 +124,12 @@ export class ReminderService {
       let bindParams = [userId];
 
       if (filter === 'today') {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = now.getFullYear() + '-' +
+                     String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(now.getDate()).padStart(2, '0');
         whereClause += ' AND DATE(remind_at) = DATE(?) AND status = "pending"';
-        bindParams.push(today + 'T00:00:00.000Z');
+        bindParams.push(today);
       } else if (filter !== 'all') {
         whereClause += ' AND status = ?';
         bindParams.push(filter);
@@ -158,7 +161,6 @@ export class ReminderService {
     try {
       const now = new Date();
       const timeContext = {
-        iso: now.toISOString(),
         time: now.toLocaleTimeString('en-US', { hour12: false }),
         day: now.toLocaleDateString('en-US', { weekday: 'long' }),
         date: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -232,10 +234,10 @@ export class ReminderService {
   }
 
   getReminderPrompt(timeContext) {
-    return `You are a JSON-only API. Analyze the user's message and return ONLY valid JSON. 
+    return `You are a JSON-only API. Analyze the user's message and return ONLY valid JSON.
     No explanations, no conversational text.
 
-    CRITICAL: Respond with VALID JSON OBJECT only. Do not include any text before or after the JSON. 
+    CRITICAL: Respond with VALID JSON OBJECT only. Do not include any text before or after the JSON.
     Use the current Time & Date context to determine the reminder time from the user message.
 
     Current Context:
@@ -251,16 +253,16 @@ export class ReminderService {
       "intent": "create_reminder|modify_reminder|not_reminder",
       "confidence": 0-100,
       "description": "Full reminder description (only if intent is create_reminder)",
-      "remindAt": "ISO timestamp (only if intent is create_reminder)",
+      "remindAt": "Local date-time string (only if intent is create_reminder)",
       "notes": "Additional context (only if intent is create_reminder)",
       "reminderTitle": "Name/description to modify (only if intent is modify_reminder)",
       "action": "reschedule|rename|add_notes|complete|cancel (only if intent is modify_reminder)",
       "newValue": "New value (only if intent is modify_reminder)"
     }
 
-    EXAMPLES:
-    {"intent": "create_reminder", "confidence": 85, "description": "Call mom", "remindAt": "2025-10-06T15:00:00.000Z", "notes": "Don't forget"}
-    {"intent": "modify_reminder", "confidence": 90, "reminderTitle": "Call mom", "action": "reschedule", "newValue": "2025-10-07T15:00:00.000Z"}
+    EXAMPLES (using current timezone context):
+    {"intent": "create_reminder", "confidence": 85, "description": "Call mom", "remindAt": "2025-10-06 15:00:00", "notes": "Don't forget"}
+    {"intent": "modify_reminder", "confidence": 90, "reminderTitle": "Call mom", "action": "reschedule", "newValue": "2025-10-07 15:00:00"}
     {"intent": "not_reminder", "confidence": 0}
 
     INVALID: Do not return any text like "I've got this" or "Got it". ONLY JSON.`;

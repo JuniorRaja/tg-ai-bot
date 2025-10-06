@@ -5,7 +5,10 @@ export class ReportGenerator {
 
   async generateDailyReport(userId) {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = now.getFullYear() + '-' +
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(now.getDate()).padStart(2, '0');
       
       // Get today's activities
       const conversations = await this.db.prepare(`
@@ -96,7 +99,9 @@ export class ReportGenerator {
     try {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      const weekAgoStr = weekAgo.getFullYear() + '-' +
+                        String(weekAgo.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(weekAgo.getDate()).padStart(2, '0');
       
       // Get week's habits
       const habits = await this.db.prepare(`
