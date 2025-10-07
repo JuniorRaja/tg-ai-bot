@@ -1,6 +1,7 @@
 import { messageHandler } from './handlers/messageHandler.js';
 import { callbackHandler } from './handlers/callbackHandler.js';
 import { ReminderService } from './services/reminderService.js';
+import { ScheduledPrompts } from './services/scheduledPrompts.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -58,8 +59,29 @@ async function handleTelegramUpdate(update, env) {
 
 async function handleCronJob(env) {
   try {
+    const currentHour = new Date().getUTCHours();
+
+    // Initialize services
     const reminderService = new ReminderService(env.DB);
+    const scheduledPrompts = new ScheduledPrompts(env.DB, env);
+
+    // Process reminder tasks (every 30 minutes, 6 AM - 10 PM)
     await reminderService.processScheduledTasks(env);
+
+    // Process scheduled prompts based on hour
+    if (currentHour >= 6 && currentHour <= 11) {
+      await scheduledPrompts.processScheduledTask('morning_greeting');
+    } else if (currentHour >= 12 && currentHour <= 17) {
+      await scheduledPrompts.processScheduledTask('afternoon_greeting');
+    } else if (currentHour >= 18 && currentHour <= 21) {
+      await scheduledPrompts.processScheduledTask('evening_greeting');
+    }
+
+    // Evening reflection at 10 PM
+    if (currentHour === 22) {
+      await scheduledPrompts.processScheduledTask('evening_reflection');
+    }
+
     return new Response('Cron completed', { status: 200 });
   } catch (error) {
     console.error('Cron job error:', error);

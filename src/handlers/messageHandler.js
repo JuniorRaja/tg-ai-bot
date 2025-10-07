@@ -2,6 +2,7 @@
 import { AIAdapter } from '../ai/aiAdapter.js';
 import { ContextManager } from '../services/contextManager.js';
 import { HabitTracker } from '../services/habitTracker.js';
+import { HealthTracker } from '../services/healthTracker.js';
 import { ReminderService } from '../services/reminderService.js';
 import { TaskService } from '../services/taskService.js';
 import { getUserFromDB, createUser } from '../storage/d1Database.js';
@@ -26,6 +27,7 @@ export async function messageHandler(message, env) {
     const aiAdapter = new AIAdapter(env);
     const contextManager = new ContextManager(env.DB, env.KV);
     const habitTracker = new HabitTracker(env.DB);
+    const healthTracker = new HealthTracker(env.DB);
     const reminderService = new ReminderService(env.DB);
     const taskService = new TaskService(env.DB);
 
@@ -37,6 +39,7 @@ export async function messageHandler(message, env) {
         aiAdapter,
         contextManager,
         habitTracker,
+        healthTracker,
         reminderService,
         taskService,
         env
@@ -125,6 +128,9 @@ async function handleTextMessage(
       console.error(`Failed to create task for user ${user.id}, message: "${text}", analysis:`, analysis);
     }
   }
+
+  // Analyze for health tracking (meals, mood, fitness, habits)
+  await healthTracker.analyzeMessage(text, user.id, analysis);
 
   // Generate AI response
   const aiResponse = await aiAdapter.generateResponse(text, {
@@ -331,6 +337,64 @@ async function handleCommand(message, user, env) {
       const reportGen = new ReportGenerator(env.DB);
       const report = await reportGen.generateDailyReport(user.id);
       return report;
+    },
+
+    '/daily': async () => {
+      const { ReportGenerator } = await import('../services/reportGenerator.js');
+      const { ScheduledPrompts } = await import('../services/scheduledPrompts.js');
+      const reportGen = new ReportGenerator(env.DB);
+      const scheduledPrompts = new ScheduledPrompts(env.DB, env);
+
+      // Get today's comprehensive health report
+      const healthReport = await reportGen.getHealthOverview(user.id, new Date().toISOString().split('T')[0]);
+
+      // Check for today's reflection
+      const today = new Date().toISOString().split('T')[0];
+      const reflection = await env.DB.prepare(`
+        SELECT responses, overall_rating, created_at
+        FROM user_reflections
+        WHERE user_id = ? AND reflection_date = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+      `).bind(user.id, today).first();
+
+      const dailyReport = await reportGen.generateDailyReport(user.id);
+
+      // Add reflection section if exists
+      if (reflection) {
+        const reflectionData = JSON.parse(reflection.responses);
+        dailyReport += `\n\n🧘‍♀️ **Your Reflections Today:**\n`;
+
+        if (reflectionData.mood) dailyReport += `• Mood: ${reflectionData.mood}\n`;
+        if (reflectionData.highlights) dailyReport += `• Highlights: ${reflectionData.highlights}\n`;
+        if (reflectionData.challenges) dailyReport += `• Challenges: ${reflectionData.challenges}\n`;
+        if (reflectionData.tomorrow) dailyReport += `• Looking forward to tomorrow: ${reflectionData.tomorrow}\n`;
+        if (reflectionData.gratitude) dailyReport += `• Grateful for: ${reflectionData.gratitude}\n`;
+        if (reflectionData.improvements) dailyReport += `• Improvements: ${reflectionData.improvements}\n`;
+
+        if (reflection.overall_rating) {
+          dailyReport += `\n⭐ Overall Rating: ${reflection.overall_rating}/10`;
+        }
+      } else {
+        dailyReport += `\n\n🧘‍♀️ **No Reflections Yet:**\n`;
+        dailyReport += `Use the buttons below to start your evening reflection:`;
+
+        // Add inline keyboard for starting reflection
+        const reflectionKeyboard = {
+          inline_keyboard: [
+            [
+              { text: 'Start Evening Reflection 🌙', callback_data: 'reflection:start' },
+              { text: 'Quick Mood Check 😊', callback_data: 'reflection:mood' }
+            ]
+          ]
+        };
+
+        // Send the message with keyboard
+        await sendTelegramMessage(chatId, dailyReport, env.TELEGRAM_BOT_TOKEN, { reply_markup: reflectionKeyboard });
+        return null; // Don't send additional message
+      }
+
+      return dailyReport;
     },
 
     '/tasks': async () => {

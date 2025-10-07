@@ -3,17 +3,80 @@ export class ReportGenerator {
     this.db = db;
   }
 
+  async getHealthOverview(userId, date) {
+    try {
+      // Get meals for the day
+      const meals = await this.db.prepare(`
+        SELECT meal_type, description, logged_at
+        FROM meals
+        WHERE user_id = ? AND date(logged_at) = ?
+        ORDER BY logged_at ASC
+      `).bind(userId, date).all();
+
+      // Get mood entries
+      const moodEntries = await this.db.prepare(`
+        SELECT mood_type, mood_level, notes, logged_at
+        FROM mood_entries
+        WHERE user_id = ? AND date(logged_at) = ?
+        ORDER BY logged_at DESC
+        LIMIT 1
+      `).bind(userId, date).first();
+
+      // Get fitness activities
+      const fitnessActivities = await this.db.prepare(`
+        SELECT value, logged_at
+        FROM health_logs
+        WHERE user_id = ? AND log_type = 'fitness' AND date(logged_at) = ?
+        ORDER BY logged_at ASC
+      `).bind(userId, date).all();
+
+      // Get water intake
+      const waterIntake = await this.db.prepare(`
+        SELECT value, logged_at
+        FROM health_logs
+        WHERE user_id = ? AND log_type = 'water' AND date(logged_at) = ?
+        ORDER BY logged_at ASC
+      `).bind(userId, date).all();
+
+      // Get sleep data
+      const sleepData = await this.db.prepare(`
+        SELECT value, logged_at
+        FROM health_logs
+        WHERE user_id = ? AND log_type = 'sleep' AND date(logged_at) = ?
+        ORDER BY logged_at DESC
+        LIMIT 1
+      `).bind(userId, date).first();
+
+      return {
+        meals: meals.results || [],
+        mood: moodEntries,
+        fitness: fitnessActivities.results || [],
+        water: waterIntake.results || [],
+        sleep: sleepData
+      };
+    } catch (error) {
+      console.error('Error getting health overview:', error);
+      return {
+        meals: [],
+        mood: null,
+        fitness: [],
+        water: [],
+        sleep: null
+      };
+    }
+  }
+
   async generateDailyReport(userId) {
     try {
       const now = new Date();
       const today = now.getFullYear() + '-' +
                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
                    String(now.getDate()).padStart(2, '0');
-      
+
       // Get today's activities
       const conversations = await this.db.prepare(`
         SELECT COUNT(*) as message_count
-        FROM conversations 
+        FROM conversations
         WHERE user_id = ? AND date(timestamp) = ?
       `).bind(userId, today).first();
 
@@ -40,11 +103,15 @@ export class ReportGenerator {
         WHERE user_id = ? AND (date(created_at) = ? OR date(completed_at) = ?)
       `).bind(userId, today, today).first();
 
+      // Get health overview
+      const healthOverview = await this.getHealthOverview(userId, today);
+
       return this.formatDailyReport({
         messageCount: conversations?.message_count || 0,
         habits: habits.results || [],
         pendingReminders: reminders?.pending_count || 0,
-        tasks: tasks || { total_tasks: 0, completed_tasks: 0 }
+        tasks: tasks || { total_tasks: 0, completed_tasks: 0 },
+        health: healthOverview
       });
     } catch (error) {
       console.error('Error generating daily report:', error);
@@ -53,14 +120,63 @@ export class ReportGenerator {
   }
 
   formatDailyReport(data) {
-    const { messageCount, habits, pendingReminders, tasks } = data;
+    const { messageCount, habits, pendingReminders, tasks, health } = data;
     const date = new Date().toLocaleDateString();
-    
+
     let report = `📊 **Daily Report - ${date}**\n\n`;
-    
+
+    // Health Overview
+    if (health && (health.meals.length > 0 || health.mood || health.fitness.length > 0 || health.water.length > 0 || health.sleep)) {
+      report += `💚 **Health Overview**\n`;
+
+      // Meals
+      if (health.meals.length > 0) {
+        const mealCount = {};
+        health.meals.forEach(meal => {
+          mealCount[meal.meal_type] = (mealCount[meal.meal_type] || 0) + 1;
+        });
+        const mealSummary = Object.entries(mealCount).map(([type, count]) => `${type} (${count})`).join(', ');
+        report += `• 🍽️ Meals: ${mealSummary}\n`;
+      }
+
+      // Mood
+      if (health.mood) {
+        const moodEmoji = {
+          positive: '😊',
+          content: '😌',
+          neutral: '😐',
+          anxious: '😰',
+          negative: '😞'
+        }[health.mood.mood_type] || '😐';
+        report += `• ${moodEmoji} Mood: ${health.mood.mood_type} (${health.mood.mood_level}/10)\n`;
+      }
+
+      // Fitness
+      if (health.fitness.length > 0) {
+        report += `• 💪 Exercise: ${health.fitness.length} activities logged\n`;
+      }
+
+      // Water
+      if (health.water.length > 0) {
+        const totalWater = health.water.reduce((sum, entry) => {
+          const data = JSON.parse(entry.value);
+          return sum + (data.amount || 1);
+        }, 0);
+        report += `• 💧 Water: ${totalWater} servings\n`;
+      }
+
+      // Sleep
+      if (health.sleep) {
+        const sleepData = JSON.parse(health.sleep.value);
+        if (sleepData.hours) {
+          report += `• 😴 Sleep: ${sleepData.hours} hours (${sleepData.quality})\n`;
+        }
+      }
+    }
+
     // Conversation activity
-    report += `💬 **Activity**: ${messageCount} messages exchanged\n`;
-    
+    report += `\n💬 **Activity**: ${messageCount} messages exchanged\n`;
+
     // Habits
     if (habits.length > 0) {
       report += `\n💪 **Habits Completed Today**:\n`;
@@ -70,17 +186,17 @@ export class ReportGenerator {
     } else {
       report += `\n💪 **Habits**: No habits tracked today\n`;
     }
-    
+
     // Tasks
     if (tasks.total_tasks > 0) {
       report += `\n✅ **Tasks**: ${tasks.completed_tasks}/${tasks.total_tasks} completed\n`;
     }
-    
+
     // Reminders
     if (pendingReminders > 0) {
       report += `\n⏰ **Reminders**: ${pendingReminders} pending\n`;
     }
-    
+
     // Motivational message
     const motivationalMessages = [
       "Great job staying productive! 🌟",
@@ -89,9 +205,9 @@ export class ReportGenerator {
       "Proud of your consistency! 🏆",
       "Another day of growth! 🌱"
     ];
-    
+
     report += `\n${motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)]}`;
-    
+
     return report;
   }
 
