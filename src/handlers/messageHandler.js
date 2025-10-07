@@ -358,7 +358,7 @@ async function handleCommand(message, user, env) {
         LIMIT 1
       `).bind(user.id, today).first();
 
-      const dailyReport = await reportGen.generateDailyReport(user.id);
+      let dailyReport = await reportGen.generateDailyReport(user.id);
 
       // Add reflection section if exists
       if (reflection) {
