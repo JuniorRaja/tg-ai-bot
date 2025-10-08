@@ -168,7 +168,7 @@ export class ReminderService {
       };
 
       const reminderPrompt = this.getReminderPrompt(timeContext);
-      console.log('Reminder prompt for AI :', reminderPrompt);
+      // console.log('Reminder prompt for AI :', reminderPrompt);
       const aiResponse = await aiAdapter.generateJsonResponse(reminderPrompt, message, {
         temperature: 0.1,
         maxTokens: 300

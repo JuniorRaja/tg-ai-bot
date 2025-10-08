@@ -63,6 +63,7 @@ async function handleTextMessage(
   aiAdapter,
   contextManager,
   habitTracker,
+  healthTracker,
   reminderService,
   taskService,
   env
